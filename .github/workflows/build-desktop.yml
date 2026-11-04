@@ -37,7 +37,7 @@ jobs:
       - name: Enable Windows Desktop
         run: flutter config --enable-windows-desktop
 
-      - name: Install Visual Studio 2019 Build Tools
+      - name: Install Visual Studio Build Tools
         shell: cmd
         run: |
           choco install visualstudio2019buildtools --params "--includeRecommended --add Microsoft.VisualStudio.Workload.VCTools" -y --no-progress || exit 0
@@ -46,41 +46,47 @@ jobs:
       - name: Check project
         shell: bash
         run: |
-          test -f engine_test_manager/pubspec.yaml
-          test -f engine_test_manager/lib/main.dart
+          test -f input/engine_test_manager/pubspec.yaml
+          test -f input/engine_test_manager/lib/main.dart
 
       - name: Detect project
         shell: bash
         run: |
-          python scripts/detect_project.py --root "$GITHUB_WORKSPACE/engine_test_manager" --output detection.json
+          python scripts/detect_project.py \
+            --root "$GITHUB_WORKSPACE/input/engine_test_manager" \
+            --output detection.json
 
       - name: Configure toolchain
         shell: bash
         run: |
           python scripts/setup_environment.py \
-            --root "$GITHUB_WORKSPACE/engine_test_manager" \
+            --root "$GITHUB_WORKSPACE/input/engine_test_manager" \
             --detect detection.json \
             --output toolchain.json
+
       - name: Generate Windows platform files
-        working-directory: engine_test_manager
+        working-directory: input/engine_test_manager
         run: flutter create --platforms=windows .
+
       - name: Get Flutter packages
-        working-directory: engine_test_manager
+        working-directory: input/engine_test_manager
         run: flutter pub get
 
       - name: Build Windows
-        working-directory: engine_test_manager
+        working-directory: input/engine_test_manager
         shell: cmd
         run: flutter build windows --release
 
       - name: Package application
         shell: bash
         run: |
-          BUNDLE_DIR="engine_test_manager/build/windows/x64/runner/Release"
+          BUNDLE_DIR="input/engine_test_manager/build/windows/x64/runner/Release"
+
           if [ ! -d "$BUNDLE_DIR" ]; then
             echo "Build output not found!"
             exit 1
           fi
+
           cd "$BUNDLE_DIR"
           7z a -tzip "$GITHUB_WORKSPACE/engine-test-manager-windows.zip" *
 
@@ -90,6 +96,7 @@ jobs:
         shell: bash
         run: |
           TAG="engine-test-manager-${{ github.run_id }}"
+
           gh release create "$TAG" \
             "engine-test-manager-windows.zip" \
             --title "Engine Test Manager Windows" \
@@ -100,5 +107,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: engine-test-manager-build-logs
-          path: engine_test_manager/build/
+          path: input/engine_test_manager/build/
           if-no-files-found: ignore
