@@ -61,7 +61,9 @@ jobs:
             --root "$GITHUB_WORKSPACE/engine_test_manager" \
             --detect detection.json \
             --output toolchain.json
-
+      - name: Generate Windows platform files
+        working-directory: engine_test_manager
+        run: flutter create --platforms=windows .
       - name: Get Flutter packages
         working-directory: engine_test_manager
         run: flutter pub get
